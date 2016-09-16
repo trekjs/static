@@ -1,0 +1,22 @@
+{
+  "name": "trek-static",
+  "version": "0.0.0",
+  "description": "Serve static files for Trek.js",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "trekjs/static",
+  "keywords": [],
+  "author": "Fangdun Cai <cfddream@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "async-to-gen": "1.1.1",
+    "trek-engine": "0.4.1"
+  },
+  "dependencies": {
+    "filesize": "3.3.0",
+    "marko": "3.10.1",
+    "mime-types": "2.1.11"
+  }
+}
