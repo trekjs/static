@@ -30,6 +30,12 @@ app.use(({ res }) => {
 app.run(3000)
 ```
 
+## APIs
+
+* `static(options)`
+
+* `list(options)`
+
 ## Badges
 
 [![Build Status](https://travis-ci.org/trekjs/static.svg?branch=master)](https://travis-ci.org/trekjs/static)
