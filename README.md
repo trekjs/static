@@ -36,6 +36,13 @@ app.run(3000)
 
 * `list(options)`
 
+* `options`
+
+  - `generateIndexPages` is true and will auto generate index pages.
+    > The index pages' design from [micro-list](https://github.com/zeit/micro-list).
+
+
+
 ## Badges
 
 [![Build Status](https://travis-ci.org/trekjs/static.svg?branch=master)](https://travis-ci.org/trekjs/static)
