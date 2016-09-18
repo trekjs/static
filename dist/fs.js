@@ -18,7 +18,7 @@ const {
   mime
 } = require('./util')
 
-const FS_DEFAULTS = {
+const defaults = {
   // Relative path for request
   relativePath: '/',
   // StripSlashes indicates how many leading slashes must be stripped
@@ -29,11 +29,11 @@ const FS_DEFAULTS = {
   // List of index file names to try opening during directory access.
   indexNames: [],
   // Index pages for directories without files matching IndexNames are automatically generated if set.
-  generateIndexPages: true,
+  generateIndexPages: false,
   // Transparently compresses responses if set to true.
   compress: true,
   compressOptions: undefined,
-  minCompressSize: 1024,
+  compressMinSize: 1024,
   // Enables byte range requests if set to true.
   acceptByteRange: true,
   // Path rewriting function.
@@ -53,57 +53,33 @@ const FS_DEFAULTS = {
 class FS {
 
   constructor (options) {
-    this.options = Object.assign({}, FS_DEFAULTS, options)
-
-    if (this.options.stripSlashes)  {
-      this.options.pathRewrite = newPathSlashesStripper(this.options.stripSlashes)
-    }
-
+    this.options = Object.assign({}, defaults, options)
   }
 
-  get root () {
-    return this.options.root
-  }
-
-  get indexNames () {
-    return this.options.indexNames
+  get relativePath () {
+    return this.options.relativePath
   }
 
   handler () {
-    let root = this.root
-    if (0 === root.length) {
+    let { root, stripSlashes } = this.options
+
+    if (stripSlashes)  {
+      this.options.pathRewrite = newPathSlashesStripper(stripSlashes)
+    }
+
+    if (!root.length) {
       root = '.'
     }
 
-    root = stripTrailingSlashes(root)
+    this.options.root = stripTrailingSlashes(root)
 
-    const h = new FSHandler(Object.assign({}, this.options, { root }))
-    this.h = h.handle.bind(h)
-    return this.h
-  }
-
-}
-
-class FSHandler {
-
-  static create (root, stripSlashes = 0) {
-    const fs = new FS({
-      root,
-      indexNames: ['index.html'],
-      generateIndexPages: true,
-      acceptByteRange: true
-    })
-
-    return fs.handler
-  }
-
-  constructor (options) {
-    this.options = Object.assign({}, FS_DEFAULTS, options)
+    return this.handle.bind(this)
   }
 
   handle ({ req, res, rawRes }, next) {return __async(function*(){
     // only accept HEAD and GET
     if (req.method !== 'GET' && req.method !== 'HEAD') return next()
+    if (!req.path.startsWith(this.relativePath)) return next()
 
     let {
       pathRewrite,
@@ -117,14 +93,18 @@ class FSHandler {
     } = this.options
     const pathname = stripTrailingSlashes(pathRewrite ? pathRewrite(req) : req.path)
     const filePath = root + pathname
-
-    const stats = yield fsStat(filePath)
-
+    let stats
     let file
-    if (stats.isFile()) {
-      file = this.openFile(filePath, stats)
-    } else if (stats.isDirectory()) {
-      file = yield this.openIndexFile(filePath, pathname)
+
+    try {
+      stats = yield fsStat(filePath)
+      if (stats.isFile()) {
+        file = this.openFile(filePath, stats)
+      } else if (stats.isDirectory()) {
+        file = yield this.openIndexFile(filePath, pathname)
+      }
+    } catch (err) {
+      return res.send(404, err.message)
     }
 
     if (file) {
@@ -236,7 +216,6 @@ class FSHandler {
       })
     )
   }.call(this))}
-
 }
 
 class File {
@@ -249,14 +228,8 @@ class File {
 
 }
 
-module.exports = {
+exports = module.exports = FS
 
-  FS,
-
-  FSHandler,
-
-  File
-
-}
+exports.File = File
 
 function __async(g){return new Promise(function(s,j){function c(a,x){try{var r=g[x?"throw":"next"](a)}catch(e){return j(e)}return r.done?s(r.value):Promise.resolve(r.value).then(c,d)}function d(e){return c(e,1)}c()})}

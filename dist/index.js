@@ -1,30 +1,22 @@
 'use strict'
 
-const { FS } = require('./fs')
+const FS = require('./fs')
 
 module.exports = {
 
   // Serve files by root
   static (options) {
     const fs = new FS(options)
-    const { relativePath } = fs.options
-
-    fs.handler()
-
-    return (ctx, next) => {
-
-      if (ctx.req.path.startsWith(relativePath)) {
-        return fs.h(ctx, next)
-      }
-
-      return next()
-    }
+    return fs.handler()
   },
 
   // A single file
   file () {},
 
   // Serves static files and generates and index page withc list all files.
-  list () {
+  list (options) {
+    const fs = new FS(options)
+    fs.options.generateIndexPages = true
+    return fs.handler()
   }
 }
