@@ -101,7 +101,7 @@ class FSHandler {
     this.options = Object.assign({}, FS_DEFAULTS, options)
   }
 
-  async handle ({ req, res, rawRes }, next) {
+  handle ({ req, res, rawRes }, next) {return __async(function*(){
     // only accept HEAD and GET
     if (req.method !== 'GET' && req.method !== 'HEAD') return next()
 
@@ -118,13 +118,13 @@ class FSHandler {
     const pathname = stripTrailingSlashes(pathRewrite ? pathRewrite(req) : req.path)
     const filePath = root + pathname
 
-    const stats = await fsStat(filePath)
+    const stats = yield fsStat(filePath)
 
     let file
     if (stats.isFile()) {
       file = this.openFile(filePath, stats)
     } else if (stats.isDirectory()) {
-      file = await this.openIndexFile(filePath, pathname)
+      file = yield this.openIndexFile(filePath, pathname)
     }
 
     if (file) {
@@ -159,7 +159,7 @@ class FSHandler {
       stream.pipe(rawRes)
       onFinished(rawRes, () => destroy(stream))
     }
-  }
+  }.call(this))}
 
   openFile (filePath, stats, stream) {
     const file = new File(filePath, stats, this)
@@ -168,11 +168,11 @@ class FSHandler {
     return file
   }
 
-  async openIndexFile (dirPath, pathname) {
+  openIndexFile (dirPath, pathname) {return __async(function*(){
     for (const indexName of this.options.indexNames) {
       const indexFilePath = path.join(dirPath, indexName)
       try {
-        const stats = await fsStat(indexFilePath)
+        const stats = yield fsStat(indexFilePath)
         if (stats.isFile()) {
           return this.openFile(indexFilePath, stats)
         }
@@ -186,18 +186,18 @@ class FSHandler {
     }
 
     return this.createDirIndex(dirPath, pathname)
-  }
+  }.call(this))}
 
-  async createDirIndex (directory, pathname) {
+  createDirIndex (directory, pathname) {return __async(function*(){
     const { relativePath, ignoredFiles } = this.options
-    let files = await fsReaddir(directory)
-    files = await Promise.all(files.map(async (filePath, i) => {
+    let files = yield fsReaddir(directory)
+    files = yield Promise.all(files.map((filePath, i) => __async(function*(){
       filePath = path.resolve(directory, filePath)
       const details = path.parse(filePath)
       details.ext = details.ext.split('.')[1]
       details.relative = path.join(relativePath, pathname, details.base)
 
-      const stats = await fsStat(filePath)
+      const stats = yield fsStat(filePath)
       if (stats.isDirectory()) {
         details.base += '/'
       } else {
@@ -208,7 +208,7 @@ class FSHandler {
         return null
       }
       return details
-    }))
+    }())))
 
     files = files.filter(f => f)
 
@@ -235,7 +235,7 @@ class FSHandler {
         nodeVersion: process.version
       })
     )
-  }
+  }.call(this))}
 
 }
 
@@ -258,3 +258,5 @@ module.exports = {
   File
 
 }
+
+function __async(g){return new Promise(function(s,j){function c(a,x){try{var r=g[x?"throw":"next"](a)}catch(e){return j(e)}return r.done?s(r.value):Promise.resolve(r.value).then(c,d)}function d(e){return c(e,1)}c()})}

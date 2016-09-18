@@ -1,20 +1,18 @@
 'use strict'
 
 const path = require('path')
-
 const TrekEngine = require('trek-engine')
-
 const serve = require('..')
 
 const app = new TrekEngine()
 
 app.use(serve.static({
-  //relativePath: '/web/static/', 
+  //relativePath: '/web/static/',
   //stripSlashes: 2,
-  relativePath: '/web', 
+  relativePath: '/web',
   stripSlashes: 1,
   root: path.resolve(__dirname, '..'),
-  generateIndexPages: true,
+  generateIndexPages: true
   // indexNames: ['index.html']
 }))
 
