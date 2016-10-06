@@ -6,7 +6,7 @@
 
   <title>Files within ${data.directory}</title>
 
-  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css">
   <style>
     body {
       background: #fff;
@@ -154,15 +154,15 @@
     </h1>
 
     <ul>
-        <li for(file in data.files) >
-          <a href="${file.relative}" class="${file.ext}">${file.base}</a>
-          <i>${file.size}</i>
-        </li>
+      <li for(file in data.files) >
+        <a href="${file.relative}" class="${file.ext}">${file.base}</a>
+        <i>${file.size}</i>
+      </li>
     </ul>
   </main>
 
   <aside>
-      <p>Node.js ${data.nodeVersion} <a href="https://github.com/trekjs/static" target="_blank">trek-static</a> running @ localhost</p>
+    <p>Node.js ${data.nodeVersion} <a href="https://github.com/trekjs/static" target="_blank" rel="noopener noreferrer">trek-static</a> running @ localhost</p>
   </aside>
 </body>
 </html>

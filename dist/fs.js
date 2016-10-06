@@ -1,56 +1,28 @@
 'use strict'
 
-const fs = require('fs')
+const { resolve, join } = require('path')
 const zlib = require('zlib')
-const crypto = require('crypto')
-const path = require('path')
-const compressible = require('compressible')
-const onFinished = require('on-finished')
 const destroy = require('destroy')
-
+const onFinished = require('on-finished')
+const compressible = require('compressible')
+const parseRange = require('range-parser')
+const defaults = require('./defaults')
+const File = require('./file')
 const {
-  stripTrailingSlashes,
   newPathSlashesStripper,
-  filesize,
-  fsStat,
-  fsReaddir,
-  render,
-  mime
+  stripTrailingSlashes,
+  isRangeFresh,
+  contentRange,
+  render
 } = require('./util')
 
-const defaults = {
-  // Relative path for request
-  relativePath: '/',
-  // StripSlashes indicates how many leading slashes must be stripped
-  // from requested path before searching requested file in the root folder
-  stripSlashes: 0,
-  // Path to the root directory to serve files from.
-  root: '',
-  // List of index file names to try opening during directory access.
-  indexNames: [],
-  // Index pages for directories without files matching IndexNames are automatically generated if set.
-  generateIndexPages: false,
-  // Transparently compresses responses if set to true.
-  compress: true,
-  compressOptions: undefined,
-  compressMinSize: 1024,
-  // Enables byte range requests if set to true.
-  acceptByteRange: true,
-  // Path rewriting function.
-  pathRewrite: undefined,
-  // Expiration duration for inactive file handlers.
-  cacheDuration: 0,
-  // Suffix to add to the name of cached compressed file.
-  compressedFileSuffix: '',
-  // Ignore files
-  ignoredFiles: ['.DS_Store', '.git/'],
-  // Optional cache control header. Overrides options.maxAge.
-  cacheControl: '',
-  // Cache control max age (ms) for the files, defaults to 8.76 hours.
-  maxAge: 60 * 60 * 1000 * 8.76
-}
+/**
+ * Regular expression for identifying a bytes Range header.
+ */
 
-class FS {
+const BYTES_RANGE_REGEXP = /^ *bytes=/
+
+module.exports = class FS {
 
   constructor (options) {
     this.options = Object.assign({}, defaults, options)
@@ -60,8 +32,16 @@ class FS {
     return this.options.relativePath
   }
 
+  get indexNames () {
+    return this.options.indexNames
+  }
+
+  get generateIndexPages () {
+    return this.options.generateIndexPages
+  }
+
   handler () {
-    let { root, stripSlashes } = this.options
+    const { root, relativePath, stripSlashes } = this.options
 
     if (stripSlashes)  {
       this.options.pathRewrite = newPathSlashesStripper(stripSlashes)
@@ -71,123 +51,164 @@ class FS {
       root = '.'
     }
 
+    if (relativePath.charCodeAt(relativePath.length - 1) !== 47) {
+      this.options.relativePath += '/'
+    }
+
     this.options.root = stripTrailingSlashes(root)
 
     return this.handle.bind(this)
   }
 
   handle ({ req, res, rawRes }, next) {return __async(function*(){
-    // only accept HEAD and GET
-    if (req.method !== 'GET' && req.method !== 'HEAD') return next()
-    if (!req.path.startsWith(this.relativePath)) return next()
-
-    let {
-      pathRewrite,
+    let { relativePath,
       root,
-      relativePath,
+      pathRewrite,
       compress,
-      compressOptions,
-      minCompressSize,
       cacheControl,
-      maxAge
+      maxAge,
+      acceptByteRange,
+      expires,
+      vary
     } = this.options
     const pathname = stripTrailingSlashes(pathRewrite ? pathRewrite(req) : req.path)
-    const filePath = root + pathname
-    let stats
-    let file
+    const filepath = root + pathname
 
-    try {
-      stats = yield fsStat(filePath)
-      if (stats.isFile()) {
-        file = this.openFile(filePath, stats)
-      } else if (stats.isDirectory()) {
-        file = yield this.openIndexFile(filePath, pathname)
-      }
-    } catch (err) {
-      return res.send(404, err.message)
+    let file = new File(filepath)
+
+    yield file.stat()
+
+    if (file.isDirectory()) {
+      file = yield this.index(filepath, pathname)
     }
 
-    if (file) {
-      const { stats } = file
+    if (!file.isFile()) {
+      return res.send(405)
+    }
 
-      if (stats) {
-        res.lastModified = stats.mtime
-      } else {
-        cacheControl = 'no-cache'
-      }
-
-      res.set('cache-control', cacheControl || `public, max-age=${maxAge}`)
+    if (file.isCreated) {
+      res.set('cache-control', 'no-cache')
+    } else {
+      res.set('cache-control', cacheControl || `max-age=${maxAge}, public`)
       res.set('content-type', file.type)
-
-      if (req.fresh) {
-        res.status = 304
-        return res.end()
-      }
-
-      let stream = file.stream || fs.createReadStream(filePath)
-      const ss = [stream]
-
-      if (compress && req.acceptsEncodings('gzip') === 'gzip'
-        && compressible(file.type)) {
-        res.set('content-encoding', 'gzip')
-        ss.push(zlib.createGzip(compressOptions))
-      } else if (stats) {
-        res.set('content-length', stats.size)
-      }
-
-      stream = ss.reduce((prev, curr) => prev.pipe(curr))
-      stream.pipe(rawRes)
-      onFinished(rawRes, () => destroy(stream))
+      res.set('expires', new Date(expires).toUTCString())
+      res.vary(vary)
     }
-  }.call(this))}
 
-  openFile (filePath, stats, stream) {
-    const file = new File(filePath, stats, this)
-    file.type = mime.contentType(path.extname(filePath)) || 'application/octet-stream'
-    file.stream = stream
-    return file
-  }
+    if (file.mtime <= new Date(req.get('if-modified-since')) || req.fresh) {
+      return res.send(304)
+    }
 
-  openIndexFile (dirPath, pathname) {return __async(function*(){
-    for (const indexName of this.options.indexNames) {
-      const indexFilePath = path.join(dirPath, indexName)
-      try {
-        const stats = yield fsStat(indexFilePath)
-        if (stats.isFile()) {
-          return this.openFile(indexFilePath, stats)
+    let len = file.size
+    // stream opts
+    let opts
+
+    if (acceptByteRange) {
+      res.set('accept-ranges', 'bytes')
+      let ranges = req.get('range')
+      let offset = 0
+      if (BYTES_RANGE_REGEXP.test(ranges)) {
+        // parse
+        ranges = parseRange(len, ranges, {
+          combine: true
+        })
+
+        // If-Range support
+        if (!isRangeFresh(req, res)) {
+          ranges = -2
         }
-      } catch (err) {
-        throw new Error(`cannot open file ${indexFilePath} ${err}`)
+
+        // unsatisfiable
+        if (ranges === -1) {
+          // Content-Range
+          res.set('content-range', contentRange('bytes', len))
+
+          // 416 Requested Range Not Satisfiable
+          return res.send(416)
+        }
       }
+
+      // valid (syntactically invalid/multiple ranges are treated as a regular response)
+      if (ranges !== -2 && ranges.length === 1) {
+        // Content-Range
+        res.status = 206
+        res.set('content-range', contentRange('bytes', len, ranges[0]))
+
+        // adjust for requested range
+        offset += ranges[0].start
+        len = ranges[0].end - ranges[0].start + 1
+      }
+
+      // set read options
+      opts = {
+        start: offset,
+        end: Math.max(offset, offset + len - 1)
+      }
+
     }
 
-    if (!this.options.generateIndexPages) {
-      throw new Error(`cannot access directory without index page. Directory ${dirPath}`)
+    let stream = file.stream(opts)
+    const ss = [stream]
+
+    if (compress
+      && req.acceptsEncodings('gzip') === 'gzip'
+      && compressible(file.type)) {
+      res.set('content-encoding', 'gzip')
+      ss.push(zlib.createGzip(compress))
+    } else if (!file.isCreated) {
+      // content-length
+      res.set('Content-Length', len)
     }
 
-    return this.createDirIndex(dirPath, pathname)
+    if (file.mtime) {
+      res.lastModified = file.mtime
+    }
+
+    res.status = 200
+    stream = ss.reduce((prev, curr) => prev.pipe(curr))
+    onFinished(rawRes, () => destroy(stream))
+    stream.pipe(rawRes)
   }.call(this))}
 
-  createDirIndex (directory, pathname) {return __async(function*(){
-    const { relativePath, ignoredFiles } = this.options
-    let files = yield fsReaddir(directory)
-    files = yield Promise.all(files.map((filePath, i) => __async(function*(){
-      filePath = path.resolve(directory, filePath)
-      const details = path.parse(filePath)
-      details.ext = details.ext.split('.')[1]
-      details.relative = path.join(relativePath, pathname, details.base)
-
-      const stats = yield fsStat(filePath)
-      if (stats.isDirectory()) {
-        details.base += '/'
-      } else {
-        details.size = filesize(stats.size, { round: 0 })
+  index (dirpath, pathname) {return __async(function*(){
+    for (const name of this.indexNames) {
+      const filepath = join(dirpath, name)
+      const file = new File(filepath)
+      try {
+        yield file.stat()
+        if (file.isFile()) return file
+      } catch (err) {
+        throw new Error(`cannot open file ${filepath} ${err}`)
       }
+    }
 
-      if (ignoredFiles.indexOf(details.base) > -1) {
+    if (!this.generateIndexPages) {
+      throw new Error(`cannot access directory without index page. Directory ${dirpath}`)
+    }
+
+    return yield this.createIndex(dirpath, pathname)
+  }.call(this))}
+
+  createIndex (directory, pathname) {return __async(function*(){
+    const { relativePath, ignoredFiles } = this.options
+    const dir = new File(directory)
+    let files = yield dir.readdir()
+
+    files = yield Promise.all(files.map((filepath, i) => __async(function*(){
+      const file = new File(join(directory, filepath)).parse()
+
+      if (ignoredFiles.indexOf(file.base) > -1) {
         return null
       }
-      return details
+
+      yield file.stat()
+
+      return {
+        size: file.filesize(),
+        relative: join(relativePath, pathname, file.base),
+        base: file.isDirectory() ? file.base + '/' : file.base,
+        exit: file.ext
+      }
     }())))
 
     files = files.filter(f => f)
@@ -195,41 +216,28 @@ class FS {
     const paths = pathname === '/' ? [''] : pathname.split('/')
 
     paths.reduce((prev, curr, i) => {
-      const url = prev + '/' + curr
+      const url = prev + (i > 1 ? '/' : '') + curr
       paths[i] = {
         name: paths[i],
         url
       }
-      return path.resolve(url + '/')
+      return url
     }, relativePath)
 
-    // return a file
-    return this.openFile(
-      directory + '/index.html',
-      undefined,
-      // render template as stream
-      render(void 0, {
-        directory,
-        paths,
-        files,
-        nodeVersion: process.version
-      })
-    )
+    const file = new File(directory + '/index.html')
+    file.isCreated = true
+    file.isFile = () => true
+    // render template as stream
+    file.stream = () => render(void 0, {
+      directory,
+      paths,
+      files,
+      nodeVersion: process.version
+    })
+
+    return file
   }.call(this))}
-}
-
-class File {
-
-  constructor (filePath, stats, handler) {
-    this.filePath = filePath
-    this.stats = stats
-    this.handler = handler
-  }
 
 }
-
-exports = module.exports = FS
-
-exports.File = File
 
 function __async(g){return new Promise(function(s,j){function c(a,x){try{var r=g[x?"throw":"next"](a)}catch(e){return j(e)}return r.done?s(r.value):Promise.resolve(r.value).then(c,d)}function d(e){return c(e,1)}c()})}

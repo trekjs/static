@@ -1,23 +1,51 @@
 'use strict'
 
-const path = require('path')
-const TrekEngine = require('trek-engine')
-const serve = require('..')
+const fs = require('fs')
+const { normalize, join } = require('path')
+const Engine = require('trek-engine')
+const serveStatic = require('..')
 
-const app = new TrekEngine()
+const root = normalize(__dirname)
 
-app.use(serve.list({
-  //relativePath: '/web/static/',
-  //stripSlashes: 2,
-  relativePath: '/web',
-  stripSlashes: 1,
-  root: path.resolve(__dirname, '..'),
-  // indexNames: ['index.html']
-}))
+async function start () {
+  const app = new Engine()
 
-app.use(({ res }) => {
-  res.status = 404
-  res.end()
-})
+  const faviconHandle = await serveStatic.favicon(join(root, 'favicon.ico'))
+  const indexHandle = serveStatic.content('text/html', fs.readFileSync(join(root, 'index.html')))
+  const serveHandle = await serveStatic.serve('/ls/', root, 1)
+  const webHandle = await serveStatic.web('/web/', join(root, '..'), 1)
+  const fsHandle = serveStatic.fs('/fs/', join(root, '..'), 1)
+  const staticHandle = serveStatic.static('/static/', join(root, '..'), 1)
 
-app.run(3030)
+  app.use(async (ctx, next) => {
+    const { req, res } = ctx
+    const requestPath = req.path
+
+    let handle
+    if (requestPath === '/') {
+      handle = indexHandle
+    } else if (requestPath === '/favicon.ico') {
+      handle = faviconHandle
+    } else if (requestPath.startsWith('/ls/')) {
+      handle = serveHandle
+    } else if (requestPath.startsWith('/web/')) {
+      handle = webHandle
+    } else if (requestPath.startsWith('/fs/')) {
+      handle = fsHandle
+    } else if (requestPath.startsWith('/static/')) {
+      handle = staticHandle
+    }
+
+    if (handle) await handle(ctx, next)
+    else res.send(404)
+
+  })
+
+  app.on('error', (err, ctx) => {
+    console.log(err)
+  })
+
+  app.run(3000)
+}
+
+start().catch(err => console.log(err))
