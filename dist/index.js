@@ -1,7 +1,7 @@
 'use strict'
 
-const etag = require('etag')
 const { resolve, join } = require('path')
+const etag = require('etag')
 const defaults = require('./defaults')
 const FS = require('./fs')
 const File = require('./file')
@@ -11,6 +11,7 @@ function create (options) {
   return new FS(options).handler()
 }
 
+/* eslint max-params: 0 */
 function handler (relativePath, systemPath, stripSlashes, compress, generateIndexPages, indexNames = []) {
   return create({
     relativePath,
@@ -39,7 +40,6 @@ module.exports = {
   // Serves bytes, buffers, memory cached, on the `req.path`.
   content (type, body, options) {
     options = Object.assign({}, defaults, options)
-
     const mtime = new Date()
     mtime.setMilliseconds(0)
 
@@ -122,7 +122,9 @@ module.exports = {
     systemPath = resolve(systemPath)
 
     const file = new File(systemPath)
-    try { yield file.stat() } catch (err) {}
+    try {
+      yield file.stat()
+    } catch (err) {}
     const isDir = file.mode && file.isDirectory()
     if (!isDir) {
       throw new Error('Directory is required')
@@ -132,13 +134,15 @@ module.exports = {
   }())},
 
   // Serves a system directory, if index.html exists and request uri
-  // is '/' then display the index.html's contents, else not index.html exists then
+  // is `/` then display the index.html's contents, else not index.html exists then
   // generates an index page which list all files.
   // it will not generate compressed files.
   web (relativePath, systemPath, stripSlashes) {return __async(function*(){
     const indexNames = []
     const file = new File(join(systemPath, 'index.html'))
-    try { yield file.stat() } catch (err) {}
+    try {
+      yield file.stat()
+    } catch (err) {}
     const hasIndex = file.mode && file.isFile()
     if (hasIndex) {
       indexNames.push('index.html')

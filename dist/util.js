@@ -41,9 +41,10 @@ const isRangeFresh = (req, res) => {
     return true
   }
 
-  return ~ifRange.indexOf('"')
-    ? ~ifRange.indexOf(res.get('etag'))
-    : Date.parse(res.get('last-modified')) <= Date.parse(ifRange)
+  /* eslint no-negated-condition: 0 */
+  return ifRange.indexOf('"') !== -1 ?
+    ifRange.indexOf(res.get('etag')) !== -1 :
+    Date.parse(res.get('last-modified')) <= Date.parse(ifRange)
 }
 
 /**

@@ -37,7 +37,7 @@ module.exports = {
   maxAge: 60 * 60 * 1000 * 8.76,
 
   // Expires: 358 days
-  expires:  (365 - 7) * 24 * 60 * 60 * 1000,
+  expires: (365 - 7) * 24 * 60 * 60 * 1000,
 
   // Manipulate the HTTP Vary header
   vary: 'accept-encoding',

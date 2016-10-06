@@ -1,6 +1,6 @@
 'use strict'
 
-const { resolve, join } = require('path')
+const { join } = require('path')
 const zlib = require('zlib')
 const destroy = require('destroy')
 const onFinished = require('on-finished')
@@ -41,9 +41,9 @@ module.exports = class FS {
   }
 
   handler () {
-    const { root, relativePath, stripSlashes } = this.options
+    let { root, relativePath, stripSlashes } = this.options
 
-    if (stripSlashes)  {
+    if (stripSlashes) {
       this.options.pathRewrite = newPathSlashesStripper(stripSlashes)
     }
 
@@ -60,8 +60,8 @@ module.exports = class FS {
     return this.handle.bind(this)
   }
 
-  handle ({ req, res, rawRes }, next) {return __async(function*(){
-    let { relativePath,
+  handle ({ req, res, rawRes }) {return __async(function*(){
+    const {
       root,
       pathRewrite,
       compress,
@@ -144,15 +144,14 @@ module.exports = class FS {
         start: offset,
         end: Math.max(offset, offset + len - 1)
       }
-
     }
 
     let stream = file.stream(opts)
     const ss = [stream]
 
-    if (compress
-      && req.acceptsEncodings('gzip') === 'gzip'
-      && compressible(file.type)) {
+    if (compress &&
+      req.acceptsEncodings('gzip') === 'gzip' &&
+      compressible(file.type)) {
       res.set('content-encoding', 'gzip')
       ss.push(zlib.createGzip(compress))
     } else if (!file.isCreated) {
@@ -175,7 +174,7 @@ module.exports = class FS {
       const filepath = join(dirpath, name)
       const file = new File(filepath)
       try {
-        yield file.stat()
+        yield file.stat() // eslint-disable-line babel/no-await-in-loop
         if (file.isFile()) return file
       } catch (err) {
         throw new Error(`cannot open file ${filepath} ${err}`)
@@ -194,7 +193,7 @@ module.exports = class FS {
     const dir = new File(directory)
     let files = yield dir.readdir()
 
-    files = yield Promise.all(files.map((filepath, i) => __async(function*(){
+    files = yield Promise.all(files.map(filepath => __async(function*(){
       const file = new File(join(directory, filepath)).parse()
 
       if (ignoredFiles.indexOf(file.base) > -1) {
@@ -228,7 +227,7 @@ module.exports = class FS {
     file.isCreated = true
     file.isFile = () => true
     // render template as stream
-    file.stream = () => render(void 0, {
+    file.stream = () => render(undefined, {
       directory,
       paths,
       files,

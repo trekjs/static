@@ -1,7 +1,7 @@
 'use strict'
 
 const { createReadStream } = require('fs')
-const { parse, resolve } = require('path')
+const { parse } = require('path')
 const { lookup } = require('mime-types')
 const filesize = require('filesize')
 const { readdir, readFile, stat } = require('./util')

@@ -38,10 +38,9 @@ async function start () {
 
     if (handle) await handle(ctx, next)
     else res.send(404)
-
   })
 
-  app.on('error', (err, ctx) => {
+  app.on('error', err => {
     console.log(err)
   })
 
