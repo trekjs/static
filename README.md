@@ -1,12 +1,14 @@
 # static
 
-Serve static files for Trek.js.
+Serve static files middleware.
+
 
 ## Installation
 
 ```
 $ npm install trek-static --save
 ```
+
 
 ## Examples
 
@@ -64,6 +66,7 @@ async function start () {
 start().catch(err => console.log(err))
 ```
 
+
 ## API
 
 * `content (type, body, options)`
@@ -99,47 +102,49 @@ start().catch(err => console.log(err))
 
 * `options`
 
-  ```
-  // Relative path for request
-  relativePath: '/',
+  ```js
+  {
+    // Relative path for request
+    relativePath: '/',
 
-  // Path to the root directory to serve files from.
-  root: '',
+    // Path to the root directory to serve files from.
+    root: '',
 
-  // StripSlashes indicates how many leading slashes must be stripped
-  // from requested path before searching requested file in the root folder
-  stripSlashes: 0,
+    // StripSlashes indicates how many leading slashes must be stripped
+    // from requested path before searching requested file in the root folder
+    stripSlashes: 0,
 
-  // List of index file names to try opening during directory access.
-  indexNames: [],
+    // List of index file names to try opening during directory access.
+    indexNames: [],
 
-  // Index pages for directories without files matching IndexNames are automatically generated if set.
-  generateIndexPages: false,
+    // Index pages for directories without files matching IndexNames are automatically generated if set.
+    generateIndexPages: false,
 
-  // Ignore files
-  ignoredFiles: ['.DS_Store', '.git/'],
+    // Ignore files
+    ignoredFiles: ['.DS_Store', '.git/'],
 
-  // Path rewriting function.
-  pathRewrite: undefined,
+    // Path rewriting function.
+    pathRewrite: undefined,
 
-  // Enables byte range requests if set to true.
-  acceptByteRange: true,
+    // Enables byte range requests if set to true.
+    acceptByteRange: true,
 
-  // Transparently compresses responses if set to true.
-  compress: true,
+    // Transparently compresses responses if set to true.
+    compress: true,
 
-  // Cache control max age (ms) for the files, defaults to 8.76 hours = 31536000 ms.
-  cacheControl: undefined,
-  maxAge: 60 * 60 * 1000 * 8.76,
+    // Cache control max age (ms) for the files, defaults to 8.76 hours = 31536000 ms.
+    cacheControl: undefined,
+    maxAge: 60 * 60 * 1000 * 8.76,
 
-  // Expires: 358 days
-  expires:  (365 - 7) * 24 * 60 * 60 * 1000,
+    // Expires: 358 days
+    expires:  (365 - 7) * 24 * 60 * 60 * 1000,
 
-  // Manipulate the HTTP Vary header
-  vary: 'accept-encoding',
+    // Manipulate the HTTP Vary header
+    vary: 'accept-encoding',
 
-  // Etag options
-  etag: { weak: true }
+    // Etag options
+    etag: { weak: true }
+  }
   ```
 
 
