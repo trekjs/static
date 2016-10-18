@@ -6,7 +6,7 @@ import request from 'request-promise'
 import listen from './helpers/listen'
 import { favicon } from '..'
 
-test('test', async t => {
+test('should respond favicon.icon', async t => {
   const app = new Engine()
   const icon = path.join(__dirname, '../examples/favicon.ico')
 

@@ -4,7 +4,7 @@ import request from 'request-promise'
 import listen from './helpers/listen'
 import { content } from '..'
 
-test('test', async t => {
+test('should respond special content', async t => {
   const app = new Engine()
   const pkg = { hello: 'trek-static' }
 
