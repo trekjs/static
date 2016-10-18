@@ -143,7 +143,10 @@ start().catch(console.error)
     vary: 'accept-encoding',
 
     // Etag options
-    etag: { weak: true }
+    etag: { weak: true },
+
+    // lru-cache options, pass to lru-cache lib
+    lruCacheOptions:; 100
   }
   ```
 
