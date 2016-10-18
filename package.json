@@ -1,6 +1,6 @@
 {
   "name": "trek-static",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Serve static files",
   "repository": "trekjs/static",
   "license": "MIT",
