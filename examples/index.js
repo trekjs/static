@@ -17,7 +17,7 @@ async function start (port = 3000) {
   const fsHandle = serveStatic.fs('/fs/', join(root, '..'), 1)
   const staticHandle = serveStatic.static('/static/', join(root, '..'), 1)
 
-  app.use(async ctx => {
+  app.use(async (ctx, next) => {
     const { req, res } = ctx
     const requestPath = req.path
 
@@ -36,7 +36,7 @@ async function start (port = 3000) {
       handle = staticHandle
     }
 
-    if (handle) await handle(ctx)
+    if (handle) await handle(ctx, next)
     else res.send(404)
   })
 

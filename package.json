@@ -42,7 +42,7 @@
     "nyc": "8.3",
     "request": "2",
     "request-promise": "4",
-    "trek-engine": "0.5.0",
+    "trek-engine": "0.5",
     "xo": "0.17"
   },
   "ava": {
