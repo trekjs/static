@@ -7,7 +7,7 @@ const serveStatic = require('..')
 
 const root = normalize(__dirname)
 
-async function start () {
+async function start (port = 3000) {
   const app = new Engine()
 
   const faviconHandle = await serveStatic.favicon(join(root, 'favicon.ico'))
@@ -17,7 +17,7 @@ async function start () {
   const fsHandle = serveStatic.fs('/fs/', join(root, '..'), 1)
   const staticHandle = serveStatic.static('/static/', join(root, '..'), 1)
 
-  app.use(async (ctx, next) => {
+  app.use(async ctx => {
     const { req, res } = ctx
     const requestPath = req.path
 
@@ -36,15 +36,14 @@ async function start () {
       handle = staticHandle
     }
 
-    if (handle) await handle(ctx, next)
+    if (handle) await handle(ctx)
     else res.send(404)
   })
 
-  app.on('error', err => {
-    console.log(err)
-  })
+  app.on('error', console.error)
 
-  app.run(3000)
+  await app.run(port)
+  console.log(`Open: http://127.0.0.1:${port}`)
 }
 
-start().catch(err => console.log(err))
+start().catch(console.error)

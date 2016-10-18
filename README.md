@@ -63,7 +63,7 @@ async function start () {
   app.run(3000)
 }
 
-start().catch(err => console.log(err))
+start().catch(console.error)
 ```
 
 

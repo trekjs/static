@@ -2,13 +2,13 @@
   "name": "trek-static",
   "version": "0.1.2",
   "description": "Serve static files",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "async-to-gen lib --out-dir dist",
-    "lint": "xo",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": "trekjs/static",
+  "license": "MIT",
+  "author": {
+    "name": "Fangdun Cai",
+    "email": "cfddream@gmail.com",
+    "url": "fundon.me"
+  },
   "keywords": [
     "serve",
     "static",
@@ -18,22 +18,36 @@
     "trek",
     "middleware"
   ],
-  "author": "Fangdun Cai <cfddream@gmail.com>",
-  "license": "MIT",
+  "main": "lib/index.js",
+  "engines": {
+    "node": ">=7"
+  },
+  "scripts": {
+    "lint": "xo",
+    "test": "xo && nyc node --harmony-async-await ./node_modules/.bin/ava"
+  },
   "dependencies": {
     "compressible": "2.0.8",
     "destroy": "1.0.4",
     "etag": "1.7.0",
     "filesize": "3.3.0",
-    "marko": "3.11.3",
+    "lru-cache": "4.0.1",
+    "marko": "3.11.8",
     "mime-types": "2.1.12",
     "on-finished": "2.3.0",
     "range-parser": "1.2.0"
   },
   "devDependencies": {
-    "async-to-gen": "1",
-    "trek-engine": "0",
-    "xo": "0"
+    "ava": "0.16",
+    "nyc": "8.3",
+    "request": "2",
+    "request-promise": "4",
+    "trek-engine": "0.5.0",
+    "xo": "0.17"
+  },
+  "ava": {
+    "concurrency": 5,
+    "require": "babel-register"
   },
   "xo": {
     "esnext": true,
@@ -47,12 +61,8 @@
       "views/*.js"
     ],
     "rules": {
-      "babel/arrow-parens": [
-        2,
-        "as-needed"
-      ],
-      "babel/object-curly-spacing": 0,
       "curly": 0,
+      "import/no-dynamic-require": 0,
       "import/no-named-as-default": 0,
       "max-lines": 0,
       "no-warning-comments": [
@@ -65,11 +75,25 @@
           "location": "anywhere"
         }
       ],
+      "object-curly-spacing": [
+        "error",
+        "always",
+        {
+          "arraysInObjects": true,
+          "objectsInObjects": true
+        }
+      ],
       "space-before-function-paren": [
         2,
         "always"
       ],
       "yoda": 0
     }
+  },
+  "nyc": {
+    "reporter": [
+      "lcov",
+      "text"
+    ]
   }
 }
