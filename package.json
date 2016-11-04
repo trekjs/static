@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "ava": "0.16",
-    "nyc": "8.3",
+    "nyc": "8.4",
     "request": "2",
     "request-promise": "4",
     "trek-engine": "0.5",
