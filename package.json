@@ -38,7 +38,7 @@
     "range-parser": "1.2.0"
   },
   "devDependencies": {
-    "ava": "0.17",
+    "ava": "0.18",
     "nyc": "10",
     "request": "2",
     "request-promise": "4",
