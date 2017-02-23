@@ -1,6 +1,6 @@
 {
   "name": "trek-static",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Serve static files",
   "repository": "trekjs/static",
   "license": "MIT",
@@ -20,19 +20,19 @@
   ],
   "main": "lib/index.js",
   "engines": {
-    "node": ">=7"
+    "node": ">=7.6"
   },
   "scripts": {
     "lint": "xo",
-    "test": "xo && nyc node --harmony-async-await ./node_modules/.bin/ava"
+    "test": "xo && nyc ava"
   },
   "dependencies": {
     "compressible": "2.0.9",
     "destroy": "1.0.4",
-    "etag": "1.7.0",
+    "etag": "1.8.0",
     "filesize": "3.5.4",
     "lru-cache": "4.0.2",
-    "marko": "3.14.1",
+    "marko": "3.14.2",
     "mime-types": "2.1.14",
     "on-finished": "2.3.0",
     "range-parser": "1.2.0"
